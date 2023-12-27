@@ -6,7 +6,8 @@ from torch import nn, Tensor
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from model import Model
-from transformer import TransformerModel
+# from transformer import TransformerModel
+from msg_encoder import TransformerModel
 from dataset import TFDataset
 from utils import AUCEarlyStopping
 from sklearn.utils.class_weight import compute_class_weight
@@ -26,7 +27,7 @@ class ModelTF(Model):
         va_dataset2 = TFDataset(va_dataset)
         va_loader = DataLoader(va_dataset2, batch_size=self.params['batch_size'], shuffle=False, num_workers=2, pin_memory=True)
         self.va_dataset = [torch.LongTensor(va_dataset[0]).to(self.device), torch.BoolTensor(va_dataset[1]).to(self.device), va_dataset[2]]
-        print(self.va_dataset[0].shape, self.va_dataset[1].shape)
+        # print(self.va_dataset[0].shape, self.va_dataset[1].shape)
         
         self.model = TransformerModel(self.params, self.device).to(self.device)
         optimizer = optim.Adam(self.model.parameters(), lr=self.params['lr'], weight_decay=self.params['weight_decay'])

@@ -84,16 +84,16 @@ class ProcessData():
         elif self.params.setting == 'code_cnn':
             with open(self.params.input_code_dict, 'r') as f:
                 vob_dict = json.load(f)
-            tr_word_list = process_dataset(self.tr_data[3], vob_dict, self.params, type)
-            te_word_list = process_dataset(self.te_data[3], vob_dict, self.params, type)
+            tr_word_list = process_dataset(self.tr_data[3], vob_dict, self.params, type='code')
+            te_word_list = process_dataset(self.te_data[3], vob_dict, self.params, type='code')
             tr_data = [self.tr_data[1], tr_word_list, self.tr_data[5]]
             te_data = [te_word_list, self.te_data[5]]
             return  tr_data, te_data, len(vob_dict)
         elif self.params.setting == 'msg_tf':
             with open(self.params.input_msg_dict, 'r') as f:
                 vob_dict = json.load(f)
-            tr_word_list, tr_mask_list = process_dataset(self.tr_data[2], vob_dict, self.params, type)
-            te_word_list, te_mask_list = process_dataset(self.te_data[2], vob_dict, self.params, type)
+            tr_word_list, tr_mask_list = process_dataset(self.tr_data[2], vob_dict, self.params, type='msg')
+            te_word_list, te_mask_list = process_dataset(self.te_data[2], vob_dict, self.params, type='msg')
             tr_data = [self.tr_data[1], tr_word_list, tr_mask_list, self.tr_data[5]]
             te_data = [te_word_list, te_mask_list, self.te_data[5]]
             return  tr_data, te_data, len(vob_dict)
