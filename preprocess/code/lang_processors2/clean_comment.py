@@ -10,6 +10,7 @@ def remove_py_com_and_doc(source):
     prev_tokentype = tokenize.INDENT
     last_lineno = -1
     last_col = 0
+    pattern = re.compile(r'[^\n]')
     try:
         for token in tokenize.generate_tokens(io_obj.readline):
             # print(token)
@@ -23,10 +24,13 @@ def remove_py_com_and_doc(source):
                 out += (" " * (start_col - last_col))
             # Remove comments:
             if token_type == tokenize.COMMENT:
+                
                 pass
             elif token_type == tokenize.STRING:
                 if prev_tokentype != tokenize.INDENT and prev_tokentype != tokenize.NEWLINE and start_col > 0:
                     out += token_string
+                else:
+                    out += re.sub(pattern, ' ', token_string)
             else:
                 out += token_string
             prev_tokentype = token_type
@@ -42,8 +46,8 @@ def remove_py_com_and_doc(source):
     except tokenize.TokenError as e:
         print("Tokenization error occurred:", e)
         pass
-    line_list = [line for line in out.split('\n') if line.strip() != '']
-    # line_list = [line for line in out.split('\n')]
+    # line_list = [line for line in out.split('\n') if line.strip() != '']
+    line_list = [line for line in out.split('\n')]
     out = '\n'.join(line_list)
     return out
 

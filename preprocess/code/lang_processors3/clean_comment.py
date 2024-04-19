@@ -43,7 +43,6 @@ def remove_py_com_and_doc(source):
         print("Tokenization error occurred:", e)
         pass
     line_list = [line for line in out.split('\n') if line.strip() != '']
-    # line_list = [line for line in out.split('\n')]
     out = '\n'.join(line_list)
     return out
 
@@ -76,10 +75,8 @@ def remove_c_com_and_doc(text):
                 else:
                     escape_cnt = 0
                 if ch == '\n':
-                    result.append('\n')
                     prev = ''
                 else:
-                    result.append(' ')
                     prev = ch
                 continue
 
@@ -89,8 +86,6 @@ def remove_c_com_and_doc(text):
                     state = State.CODE
                     result.append('\n')
                     prev = ''
-                    continue
-                result.append(' ')
                 continue
 
             # Skip to the end of the string literal
@@ -156,8 +151,8 @@ def remove_c_com_and_doc(text):
 
         # Returns filtered text
         if prev: result.append(prev)
-        # line_list = [line for line in ''.join(result).split('\n') if line.strip() != '']
-        line_list = [line for line in ''.join(result).split('\n')]
+        line_list = [line for line in ''.join(result).split('\n') if line.strip() != '']
+        # line_list = [line for line in ''.join(result).split('\n')]
         result = '\n'.join(line_list)
         return result
     

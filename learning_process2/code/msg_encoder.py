@@ -91,13 +91,22 @@ class TransformerEncoder(nn.Module):
         
     def forward(self, x, key_padding_mask=None):
         if key_padding_mask != None:
-            mask = torch.zeros(key_padding_mask.shape[0], key_padding_mask.shape[1]).to(x.device)
+            mask = torch.zeros_like(key_padding_mask, dtype=torch.bool).to(x.device)
             mask = mask.masked_fill_(key_padding_mask, float("-inf"))
             mask = mask.reshape(mask.shape[0], 1, 1, mask.shape[1])
-        # print(mask)
+        # print(mask.shape)
         for layer in self.encoders:
             x = layer(x, mask=mask)
         return x
+    #   def forward(self, x, key_padding_mask=None):
+    #     if key_padding_mask != None:
+    #         mask = torch.zeros(key_padding_mask.shape[0], key_padding_mask.shape[1]).to(x.device)
+    #         mask = mask.masked_fill_(key_padding_mask, float("-inf"))
+    #         mask = mask.reshape(mask.shape[0], 1, 1, mask.shape[1])
+    #     # print(mask)
+    #     for layer in self.encoders:
+    #         x = layer(x, mask=mask)
+    #     return x
             
     def generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)

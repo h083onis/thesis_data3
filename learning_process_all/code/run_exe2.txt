@@ -1,0 +1,1 @@
+python run.py -i_tr_data ../resource/qt_train.pkl -i_te_data ../resource/qt_test.pkl -s ensemble -c random -p qt

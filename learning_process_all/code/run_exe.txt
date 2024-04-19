@@ -1,0 +1,1 @@
+python run.py -i_tr_data ../resource/openstack_train.pkl -i_te_data ../resource/openstack_test.pkl -s msg_tf -c random -p openstack -i_m_dict ../resource/openstack_msg_dict.json

@@ -36,11 +36,16 @@ if a == "\\'\\n\"":
     """test
     """
 # plk
+print("ok" + """
+        test
+        """)
 
 if a == '\\\'""':
     print("ok" + "ok")
     print("ok" + "")
-    print("ok" + """test""")
+    print("ok" + """
+          test
+          """)
     print("ok" + """test""")
     """test
     """

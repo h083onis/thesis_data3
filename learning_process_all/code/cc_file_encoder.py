@@ -10,14 +10,15 @@ class SoftmaxAttention(nn.Module):
         self.head_dim = head_dim
     
     def forward(self, q, k, v, mask=None):
-        #[batch, num_head, len, head_dim] 
-        logit = torch.einsum('bhld, bhmd->bhlm', q, k) / math.sqrt(self.head_dim)
+        #[batch, num_file, num_head, len, head_dim] 
+        logit = torch.einsum('bfhld, bfhmd->bfhlm', q, k) / math.sqrt(self.head_dim)
         print(logit.shape)
+        print(mask)
         if mask != None:
             logit = logit + mask
         # print(logit)
         attention_weight = F.softmax(logit, dim=-1)
-        x = torch.einsum('bhlm, bhmd->bhld', attention_weight, v)
+        x = torch.einsum('bfhlm, bfhmd->bfhld', attention_weight, v)
         
         return x
     
@@ -32,34 +33,35 @@ class SelfAttention(nn.Module):
         
         self.head_dim = int(dim / num_head)
         
-        self.w_q = nn.Linear(self.dim, self.dim)
-        self.w_k = nn.Linear(self.dim, self.dim)
-        self.w_v = nn.Linear(self.dim, self.dim)
+        self.w_q = nn.Linear(self.dim, self.dim, bias=False)
+        self.w_k = nn.Linear(self.dim, self.dim, bias=False)
+        self.w_v = nn.Linear(self.dim, self.dim, bias=False)
+        self.linear = nn.Linear(self.dim, self.dim, bias = False)
         
         self.attention = SoftmaxAttention(self.head_dim)
     
     def forward(self, x, mask):
-        #[batch, len, dim]
+        #[batch, num_file, len, dim]
         q = self.split_heads(self.w_q(x))
         k = self.split_heads(self.w_k(x))
         v = self.split_heads(self.w_v(x))
         
         attention_out = self.attention(q.float(), k.float(), v.float(), mask.float())
         attention_out = self.combine_heads(attention_out)
-        return attention_out
+        return self.linear(attention_out)
     
-    #[batch,len,dim]->[batch,num_head,len,head_dim]  
+    #[batch, num_file, len, dim]->[batch, num_file, num_head, len, head_dim]  
     def split_heads(self, x):
-        #[batch,len,dim]->[batch,len,head,head_dim]
-        x = x.reshape(x.size(0), x.size(1), self.num_head, self.head_dim)
-        #[batch,len,num_head,head_dim]->[batch,num_head,len,head_dim] 
-        x = x.transpose(1, 2)
+        #[batch, num_file, len, dim]->[batch, num_file, len, num_head, head_dim]
+        x = x.reshape(x.size(0), x.size(1), x.size(2), self.num_head, self.head_dim)
+        #[batch, num_file, len, num_head, head_dim]->[batch, num_file, num_head, len, head_dim] 
+        x = x.transpose(2, 3)
         return x
     
-    #[batch,head,len,num_head_dim]->[batch,len,dim]
+    #[batch, num_file, num_head, len, head_dim]->[batch, num_file, len, dim]
     def combine_heads(self, x):
-        x = x.transpose(1, 2)
-        x = x.reshape(x.size(0), x.size(1), self.num_head * self.head_dim)
+        x = x.transpose(2, 3)
+        x = x.reshape(x.size(0), x.size(1), x.size(2), self.num_head * self.head_dim)
         return x
 
 class TransformerEncoderLayer(nn.Module):
@@ -83,7 +85,7 @@ class TransformerEncoderLayer(nn.Module):
         x = self.norm(x)
         return x
     
-class TransformerEncoder(nn.Module):
+class FileEncoder(nn.Module):
     def __init__(self, num_layer, dim, hid, num_head, dropout=0.5):
         super().__init__()
         
@@ -91,13 +93,22 @@ class TransformerEncoder(nn.Module):
         
     def forward(self, x, key_padding_mask=None):
         if key_padding_mask != None:
-            mask = torch.zeros(key_padding_mask.shape[0], key_padding_mask.shape[1]).to(x.device)
+            mask = torch.zeros_like(key_padding_mask, dtype=torch.bool).to(x.device)
             mask = mask.masked_fill_(key_padding_mask, float("-inf"))
-            mask = mask.reshape(mask.shape[0], 1, 1, mask.shape[1])
-        # print(mask)
+            mask = mask.reshape(mask.shape[0], mask.shape[1], 1, 1, mask.shape[2])
+        print(mask.shape)
         for layer in self.encoders:
             x = layer(x, mask=mask)
         return x
+    #   def forward(self, x, key_padding_mask=None):
+    #     if key_padding_mask != None:
+    #         mask = torch.zeros(key_padding_mask.shape[0], key_padding_mask.shape[1]).to(x.device)
+    #         mask = mask.masked_fill_(key_padding_mask, float("-inf"))
+    #         mask = mask.reshape(mask.shape[0], 1, 1, mask.shape[1])
+    #     # print(mask)
+    #     for layer in self.encoders:
+    #         x = layer(x, mask=mask)
+    #     return x
             
     def generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)

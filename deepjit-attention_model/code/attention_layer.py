@@ -5,18 +5,16 @@ from torch.nn import functional as F
 from torch.nn.modules.normalization import LayerNorm
 
 class SoftmaxAttention(nn.Module):
-    def __init__(self, head_dim):
+    def __init__(self, head_dim, dropout=0.1):
         super().__init__()
         self.head_dim = head_dim
+        self.dropout = nn.Dropout(dropout)
     
-    def forward(self, q, k, v, mask=None):
+    def forward(self, q, k, v):
         #[batch, num_head, len, head_dim] 
         logit = torch.einsum('bhld, bhmd->bhlm', q, k) / math.sqrt(self.head_dim)
-        print(logit.shape)
-        if mask != None:
-            logit = logit + mask
-        # print(logit)
         attention_weight = F.softmax(logit, dim=-1)
+        attention_weight = self.dropout(attention_weight)
         x = torch.einsum('bhlm, bhmd->bhld', attention_weight, v)
         
         return x
@@ -32,9 +30,10 @@ class SelfAttention(nn.Module):
         
         self.head_dim = int(dim / num_head)
         
-        self.w_q = nn.Linear(self.dim, self.dim)
-        self.w_k = nn.Linear(self.dim, self.dim)
-        self.w_v = nn.Linear(self.dim, self.dim)
+        self.w_q = nn.Linear(self.dim, self.dim, bias=False)
+        self.w_k = nn.Linear(self.dim, self.dim, bias=False)
+        self.w_v = nn.Linear(self.dim, self.dim, bias=False)
+        self.linear = nn.Linear(self.dim, self.dim, bias = False)
         
         self.attention = SoftmaxAttention(self.head_dim)
     
@@ -46,7 +45,7 @@ class SelfAttention(nn.Module):
         
         attention_out = self.attention(q.float(), k.float(), v.float(), mask.float())
         attention_out = self.combine_heads(attention_out)
-        return attention_out
+        return self.linear(attention_out)
     
     #[batch,len,dim]->[batch,num_head,len,head_dim]  
     def split_heads(self, x):
@@ -62,46 +61,14 @@ class SelfAttention(nn.Module):
         x = x.reshape(x.size(0), x.size(1), self.num_head * self.head_dim)
         return x
 
-class TransformerEncoderLayer(nn.Module):
-    def __init__(self, dim, num_head, hid, dropout):
+class AttentionLayer(nn.Module):
+    def __init__(self, dim, num_head):
         super().__init__()
         
         self.attention = SelfAttention(dim, num_head)
-        self.feed = nn.Sequential(
-                    nn.Linear(dim,hid),
-                    nn.Dropout(dropout),
-                    nn.ReLU(),
-                    nn.Linear(hid,dim),
-                )
-        self.norm = LayerNorm(dim, eps=1e-5)
-        self.dropout = nn.Dropout(dropout)
         
-    def forward(self, x, mask):
-        x = self.dropout(self.attention(x, mask)) + x
-        x = self.norm(x)
-        x = self.dropout(self.feed(x)) + x
-        x = self.norm(x)
+    def forward(self, x):
+        x = self.attention(x)
         return x
-    
-class TransformerEncoder(nn.Module):
-    def __init__(self, num_layer, dim, hid, num_head, dropout=0.5):
-        super().__init__()
-        
-        self.encoders = nn.ModuleList([TransformerEncoderLayer(dim, num_head, hid, dropout)for i in range(num_layer)])
-        
-    def forward(self, x, key_padding_mask=None):
-        if key_padding_mask != None:
-            mask = torch.zeros(key_padding_mask.shape[0], key_padding_mask.shape[1]).to(x.device)
-            mask = mask.masked_fill_(key_padding_mask, float("-inf"))
-            mask = mask.reshape(mask.shape[0], 1, 1, mask.shape[1])
-        # print(mask)
-        for layer in self.encoders:
-            x = layer(x, mask=mask)
-        return x
-            
-    def generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask
     
     

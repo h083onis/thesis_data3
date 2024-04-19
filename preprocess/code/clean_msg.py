@@ -5,7 +5,7 @@ import re
 from bs4 import BeautifulSoup
 
 class CleanMsg():
-    def __init__(self, project):
+    def __init__(self, project=None):
         self.project = project
         
     def excute(self, text):
@@ -16,6 +16,7 @@ class CleanMsg():
         clean_text = list(map(contractions.fix, clean_text))
         clean_text = list(map(self.lower_text, clean_text))
         clean_text = list(map(self.clean_url, clean_text))
+        clean_text = list(map(self.clean_mail, clean_text))
         clean_text = list(map(self.clean_issue_id, clean_text))
         clean_text = list(map(self.clean_change_id, clean_text))
         clean_text = list(map(self.clean_commit_id, clean_text))
@@ -75,17 +76,18 @@ class CleanMsg():
         result = replacer.sub('0', text)
         """
         # 連続した数字を0で置換
-        replaced_text = re.sub(r'\d+', '[NUM]', text)
+        replaced_text = re.sub(r'\d+', '<num>', text)
         return replaced_text
 
     def clean_hex(self, text):
         pattern = r'0x[0-9a-fA-F]+'
-        clean_text = re.sub(pattern, '[NUM]', text)
+        clean_text = re.sub(pattern, '<num>', text)
         return clean_text
     
     def clean_commit_id(self, text):
         pattern = r'[0-9a-f]{40}'
-        clean_text = re.sub(pattern, '[COMMITID]', text)
+        # clean_text = re.sub(pattern, '<id>', text)
+        clean_text = re.sub(pattern, '', text)
         return clean_text
     
     def clean_change_id(self, text):
@@ -93,13 +95,19 @@ class CleanMsg():
         match = re.search(pattern, text, flags=re.IGNORECASE)
         if match:
             change_id_to_replace = match.group(1)
-            result_text = text.replace(change_id_to_replace, '[CHANGEID]')
+            # result_text = text.replace(change_id_to_replace, '<id>')
+            result_text = text.replace(change_id_to_replace, '')
             return result_text
         else:
             return text
     
     def clean_url(self, text):
-        clean_text = re.sub(r'http\S+', '[URL]', text)
+        clean_text = re.sub(r'http\S+', '', text)
+        return clean_text
+    
+    def clean_mail(self, text):
+        pattern = r'<\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b>'
+        clean_text = re.sub(pattern, '', text)
         return clean_text
     
     def clean_issue_id(self, text):
@@ -108,7 +116,8 @@ class CleanMsg():
             match = re.search(pattern, text, flags=re.IGNORECASE)
             if match:
                 change_id_to_replace = match.group(0)
-                result_text = text.replace(change_id_to_replace, '[ISSUEID]')
+                # result_text = text.replace(change_id_to_replace, '<id>')
+                result_text = text.replace(change_id_to_replace, '')
                 return result_text
             else:
                 return text
@@ -117,7 +126,8 @@ class CleanMsg():
             match = re.search(pattern, text, flags=re.IGNORECASE)
             if match:
                 change_id_to_replace = match.group(2)
-                result_text = text.replace(change_id_to_replace, '[ISSUEID]')
+                # result_text = text.replace(change_id_to_replace, '<id>')
+                result_text = text.replace(change_id_to_replace, '')
                 return result_text
             else:
                 return text
